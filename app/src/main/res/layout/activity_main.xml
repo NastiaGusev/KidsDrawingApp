@@ -1,31 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.example.kidsdrawingapp.DrawingView
-        android:id="@+id/main_DrawingView"
+    <FrameLayout
+        android:id="@+id/main_frameLayout"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="5dp"
         android:background="@drawable/background_drawing"
+        android:padding="1dp"
+
         app:layout_constraintBottom_toTopOf="@id/main_LAY_Colors"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/main_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/paris" />
+
+        <com.example.kidsdrawingapp.DrawingView
+            android:id="@+id/main_DrawingView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80FFFFFF" />
+
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/main_LAY_Colors"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@id/main_IMG_BrushSize"
+        app:layout_constraintBottom_toTopOf="@id/main_buttons"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_DrawingView">
+        app:layout_constraintTop_toBottomOf="@id/main_frameLayout">
 
         <ImageButton
             android:layout_width="25dp"
@@ -110,17 +128,35 @@
 
     </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/main_IMG_BrushSize"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_margin="6dp"
-        android:background="@color/white"
-        android:scaleType="fitXY"
-        android:src="@drawable/ic_brush"
+    <LinearLayout
+        android:id="@+id/main_buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_LAY_Colors" />
+        app:layout_constraintTop_toBottomOf="@id/main_LAY_Colors">
+
+        <ImageButton
+            android:id="@+id/main_IMG_ImagePicker"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_margin="10dp"
+            android:background="@color/white"
+            android:scaleType="fitXY"
+            android:src="@drawable/ic_picture" />
+
+        <ImageButton
+            android:id="@+id/main_IMG_BrushSize"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_margin="10dp"
+            android:background="@color/white"
+            android:scaleType="fitXY"
+            android:src="@drawable/ic_brush" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
