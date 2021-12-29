@@ -17,11 +17,15 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
     private var canvas: Canvas? = null
 
     private var paths = ArrayList<CustomPath>()
+    private var undoPaths = ArrayList<CustomPath>()
 
     init {
         setUpDrawing()
     }
 
+    /**
+     * Constructor is called only once when the application layout is first created at launch
+     */
     private fun setUpDrawing() {
         drawPath = CustomPath(color, brushSize)
 
@@ -57,7 +61,9 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
         }
     }
 
-    //For printing on the screen the drawing
+    /**
+     * Function for printing on the screen the drawing that was made
+     */
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         val touchX = event?.x
         val touchY = event?.y
@@ -92,6 +98,14 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
         }
         invalidate()
         return true
+    }
+
+    fun onClickUndo() {
+        if(paths.size>0){
+            undoPaths.add(paths.removeAt(paths.size-1))
+            //Call internally onDraw method to update the canvas
+            invalidate()
+        }
     }
 
     fun setSizeForBrush(newSize: Float) {

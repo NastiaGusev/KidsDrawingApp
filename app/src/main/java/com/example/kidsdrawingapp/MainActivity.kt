@@ -4,10 +4,15 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.core.view.get
@@ -15,7 +20,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.android.material.snackbar.Snackbar
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
@@ -25,6 +37,10 @@ class MainActivity : AppCompatActivity() {
     private var mainLAYColors: LinearLayout? = null
     private var mainIMGImagePicker: ImageButton? = null
     private var mainBackground: ImageView? = null
+    private var mainIMGUndo: ImageButton? = null
+    private var mainIMGSave: ImageButton? = null
+
+    private var customProgressBar: Dialog? = null
 
     private val cameraResultLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(
@@ -145,6 +161,23 @@ class MainActivity : AppCompatActivity() {
         mainBackground = findViewById(R.id.main_background)
         mainIMGImagePicker?.setOnClickListener {
             requestStoragePermission()
+
+        }
+
+        mainIMGUndo = findViewById(R.id.main_IMG_Undo)
+        mainIMGUndo?.setOnClickListener {
+            drawingView?.onClickUndo()
+        }
+
+        mainIMGSave = findViewById(R.id.main_IMG_Save)
+        mainIMGSave?.setOnClickListener {
+
+            if(isReadStorageAllowed()){
+                lifecycleScope.launch {
+                    val drawingView: FrameLayout = findViewById(R.id.main_frameLayout)
+                    saveBitmapFile(getBitmapFromView(drawingView))
+                }
+            }
         }
 
         mainLAYColors = findViewById(R.id.main_LAY_Colors)
@@ -152,20 +185,25 @@ class MainActivity : AppCompatActivity() {
         currentPaintIMB!!.setImageDrawable(
             ContextCompat.getDrawable(this, R.drawable.pallet_pressed)
         )
+
+
     }
 
-    private fun requestStoragePermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        ) {
-            showRationalDialog(
-                "Kids Drawing App", "Kids Drawing App needs to access your " +
-                        "external storage for uploading images to assign background images."
-            )
-        } else {
-            requestPermission.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+
+    private fun cancelProgressDialog() {
+        if (customProgressBar != null) {
+            customProgressBar?.dismiss()
+            customProgressBar = null
         }
+    }
+
+    private fun showProgressDialog() {
+        customProgressBar = Dialog(this@MainActivity)
+        //Set the screen content from a layout resource.
+        //The resource will be inflated adding all the top level views to the screen
+        customProgressBar?.setContentView(R.layout.dialog_custom_progress)
+        //Start the dialog and display it on the screen
+        customProgressBar?.show()
     }
 
     /**
@@ -210,7 +248,6 @@ class MainActivity : AppCompatActivity() {
             )
             currentPaintIMB = imageButton
         }
-
     }
 
     /**
@@ -225,6 +262,119 @@ class MainActivity : AppCompatActivity() {
         builder.create().show()
     }
 
+    private fun isReadStorageAllowed():Boolean {
+        val result = ContextCompat.checkSelfPermission(this,  Manifest.permission.READ_EXTERNAL_STORAGE)
+        return result == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestStoragePermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        ) {
+            showRationalDialog(
+                "Kids Drawing App", "Kids Drawing App needs to access your " +
+                        "external storage for uploading images to assign background images."
+            )
+        } else {
+            requestPermission.launch(
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
+        }
+    }
+
+    /**
+     * Function for storing the view of the app into a bitmap
+     * Bitmap is stored more easily on device
+     */
+    private fun getBitmapFromView(view: View): Bitmap {
+        //Get the drawing from the view
+        val returnedBitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+
+        val canvas = Canvas(returnedBitmap)
+        //Get the background of the drawing
+        val background = view.background
+
+        if (background != null) {
+            //If there is an image in the background add to canvas
+            background.draw(canvas)
+        } else {
+            //If there is no image add white background
+            canvas.drawColor(Color.WHITE)
+        }
+        //draw the canvas on our view
+        view.draw(canvas)
+
+        return returnedBitmap
+    }
+
+    private suspend fun saveBitmapFile(bitmap: Bitmap?): String {
+        var result = ""
+        withContext(Dispatchers.IO) {
+            if (bitmap != null) {
+                try {
+                    val bytes = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 90, bytes)
+                    val file =
+                        File(
+                            externalCacheDir?.absoluteFile.toString()
+                                    + File.separator + "KidsDrawingApp_"
+                                    + System.currentTimeMillis() / 1000
+                                    + ".png"
+                        )
+                    val fileOutputStream = FileOutputStream(file)
+                    fileOutputStream.write(bytes.toByteArray())
+                    fileOutputStream.close()
+
+                    result = file.absolutePath
+
+                    runOnUiThread {
+                        if (result.isNotEmpty()) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "File save successfully : $result",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Something went wrong saving the file!",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    result = ""
+                    e.printStackTrace()
+                }
+            }
+        }
+        return result
+    }
+
+
+    /**
+     * for launching the function
+     * showProgressDialog()
+     * lifecycleScope.launch {
+     *      execute("Task executed successfully")
+     * }
+     */
+    private suspend fun execute(result: String) {
+        withContext(Dispatchers.IO) {
+            for (i in 1..100000) {
+                Log.e("TAG", "" + i)
+            }
+            runOnUiThread {
+                cancelProgressDialog()
+                Toast.makeText(this@MainActivity, result, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     /**
      * Function for creating short progress dialog for quick actions
