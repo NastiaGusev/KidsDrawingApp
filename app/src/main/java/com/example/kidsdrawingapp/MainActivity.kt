@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.media.Image
+import android.media.MediaScannerConnection
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -32,13 +34,16 @@ import java.lang.Exception
 
 class MainActivity : AppCompatActivity() {
     private var drawingView: DrawingView? = null
-    private var mainIMGBrushSize: ImageButton? = null
-    private var currentPaintIMB: ImageButton? = null
-    private var mainLAYColors: LinearLayout? = null
-    private var mainIMGImagePicker: ImageButton? = null
     private var mainBackground: ImageView? = null
+
+    private var mainIMGBrushSize: ImageButton? = null
+    private var mainIMGImagePicker: ImageButton? = null
     private var mainIMGUndo: ImageButton? = null
     private var mainIMGSave: ImageButton? = null
+    private var mainIMGColor: ImageButton? = null
+    private var mainIMGErase: ImageButton? = null
+    private var mainIMGShare: ImageButton? = null
+
 
     private var customProgressBar: Dialog? = null
 
@@ -150,6 +155,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        mainIMGColor = findViewById(R.id.main_IMG_Color)
+        mainIMGColor?.setOnClickListener {
+            showBrushColorChooserDialog()
+        }
+
+        mainIMGErase = findViewById(R.id.main_IMG_Erase)
+        mainIMGErase?.setOnClickListener {
+            drawingView?.setColor("#FFFFFFFF")
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_white))
+        }
+
         drawingView = findViewById(R.id.main_DrawingView)
         drawingView?.setSizeForBrush(20.toFloat())
         mainIMGBrushSize = findViewById(R.id.main_IMG_BrushSize)
@@ -169,26 +186,30 @@ class MainActivity : AppCompatActivity() {
             drawingView?.onClickUndo()
         }
 
-        mainIMGSave = findViewById(R.id.main_IMG_Save)
-        mainIMGSave?.setOnClickListener {
-
-            if(isReadStorageAllowed()){
+        mainIMGShare = findViewById(R.id.main_IMG_Share)
+        mainIMGShare?.setOnClickListener {
+            showProgressDialog()
+            if (isReadStorageAllowed()) {
                 lifecycleScope.launch {
                     val drawingView: FrameLayout = findViewById(R.id.main_frameLayout)
-                    saveBitmapFile(getBitmapFromView(drawingView))
+                    saveBitmapFile(getBitmapFromView(drawingView), "share")
                 }
             }
         }
 
-        mainLAYColors = findViewById(R.id.main_LAY_Colors)
-        currentPaintIMB = mainLAYColors!![0] as ImageButton
-        currentPaintIMB!!.setImageDrawable(
-            ContextCompat.getDrawable(this, R.drawable.pallet_pressed)
-        )
+        mainIMGSave = findViewById(R.id.main_IMG_Save)
+        mainIMGSave?.setOnClickListener {
 
+            showProgressDialog()
+            if (isReadStorageAllowed()) {
+                lifecycleScope.launch {
+                    val drawingView: FrameLayout = findViewById(R.id.main_frameLayout)
+                    saveBitmapFile(getBitmapFromView(drawingView), "save")
+                }
+            }
+        }
 
     }
-
 
     private fun cancelProgressDialog() {
         if (customProgressBar != null) {
@@ -234,21 +255,98 @@ class MainActivity : AppCompatActivity() {
         brushDialog.show()
     }
 
-    fun paintClicked(view: View) {
-        if (view != currentPaintIMB) {
-            val imageButton = view as ImageButton
-            val colorTag = imageButton.tag.toString()
+    /**
+     * Function for creating dialog for choosing brush size
+     */
+    private fun showBrushColorChooserDialog() {
+        val brushColorDialog = Dialog(this)
+        brushColorDialog.setContentView(R.layout.dialog_brush_color)
+        brushColorDialog.setTitle("Brush color")
 
+        val blackButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_black)
+        blackButton.setOnClickListener {
+            val colorTag = blackButton.tag.toString()
             drawingView?.setColor(colorTag)
-            imageButton.setImageDrawable(
-                ContextCompat.getDrawable(this, R.drawable.pallet_pressed)
-            )
-            currentPaintIMB?.setImageDrawable(
-                ContextCompat.getDrawable(this, R.drawable.pallet_normal)
-            )
-            currentPaintIMB = imageButton
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_black))
+            brushColorDialog.dismiss()
         }
+
+        val yellowButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_yellow)
+        yellowButton.setOnClickListener {
+            val colorTag = yellowButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_yellow))
+            brushColorDialog.dismiss()
+        }
+
+        val blueButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_blue)
+        blueButton.setOnClickListener {
+            val colorTag = blueButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_blue))
+            brushColorDialog.dismiss()
+        }
+
+        val greyButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_grey)
+        greyButton.setOnClickListener {
+            val colorTag = greyButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_grey))
+            brushColorDialog.dismiss()
+        }
+
+        val pinkButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_pink)
+        pinkButton.setOnClickListener {
+            val colorTag = pinkButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_pink))
+            brushColorDialog.dismiss()
+        }
+
+        val greenButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_green)
+        greenButton.setOnClickListener {
+            val colorTag = greenButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_green))
+            brushColorDialog.dismiss()
+        }
+
+        val orangeButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_orange)
+        orangeButton.setOnClickListener {
+            val colorTag = orangeButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_orange))
+            brushColorDialog.dismiss()
+        }
+
+        val purpleButton: ImageButton = brushColorDialog.findViewById(R.id.dialog_purple)
+        purpleButton.setOnClickListener {
+            val colorTag = purpleButton.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_purple))
+            brushColorDialog.dismiss()
+        }
+
+        val purple2Button: ImageButton = brushColorDialog.findViewById(R.id.dialog_lightPurple)
+        purple2Button.setOnClickListener {
+            val colorTag = purple2Button.tag.toString()
+            drawingView?.setColor(colorTag)
+            mainIMGColor?.setImageDrawable(
+                ContextCompat.getDrawable(this, R.drawable.brush_purple2))
+            brushColorDialog.dismiss()
+        }
+
+        brushColorDialog.show()
     }
+
 
     /**
      * Shows rationale dialog for displaying why the app needs permission
@@ -262,8 +360,9 @@ class MainActivity : AppCompatActivity() {
         builder.create().show()
     }
 
-    private fun isReadStorageAllowed():Boolean {
-        val result = ContextCompat.checkSelfPermission(this,  Manifest.permission.READ_EXTERNAL_STORAGE)
+    private fun isReadStorageAllowed(): Boolean {
+        val result =
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
         return result == PackageManager.PERMISSION_GRANTED
     }
 
@@ -311,7 +410,7 @@ class MainActivity : AppCompatActivity() {
         return returnedBitmap
     }
 
-    private suspend fun saveBitmapFile(bitmap: Bitmap?): String {
+    private suspend fun saveBitmapFile(bitmap: Bitmap?, choose: String): String {
         var result = ""
         withContext(Dispatchers.IO) {
             if (bitmap != null) {
@@ -332,19 +431,11 @@ class MainActivity : AppCompatActivity() {
                     result = file.absolutePath
 
                     runOnUiThread {
-                        if (result.isNotEmpty()) {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "File save successfully : $result",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Something went wrong saving the file!",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                        cancelProgressDialog()
+                        if(choose == "save"){
+                            runUISaveImage(result)
+                        }else if(choose == "share")
+                            runUIShareImage(result)
                     }
 
                 } catch (e: Exception) {
@@ -354,6 +445,44 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return result
+    }
+
+    private fun runUISaveImage (result: String){
+        if (result.isNotEmpty()) {
+            Toast.makeText(
+                this@MainActivity,
+                "File save successfully : $result",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            Toast.makeText(
+                this@MainActivity,
+                "Something went wrong saving the file!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun runUIShareImage (result: String){
+        if (result.isNotEmpty()) {
+            shareImage(result)
+        } else {
+            Toast.makeText(
+                this@MainActivity,
+                "Something went wrong sharing the file!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun shareImage(result: String) {
+        MediaScannerConnection.scanFile(this, arrayOf(result), null) { path, uri ->
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+            shareIntent.type = "image/png"
+            startActivity(Intent.createChooser(shareIntent, "Share"))
+        }
     }
 
 
